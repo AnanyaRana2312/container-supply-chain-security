@@ -18,6 +18,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
+      security-events: write
 
     steps:
     - name: Checkout repository
@@ -56,10 +57,11 @@ jobs:
         severity: 'CRITICAL,HIGH'
 
     - name: Upload Trivy results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
+        category: 'trivy'
 
     - name: Push Docker image to GHCR
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
