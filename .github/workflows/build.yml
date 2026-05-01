@@ -61,7 +61,7 @@ jobs:
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        password: ${{ secrets.GHCR_PAT }}
 
     - name: Push Docker image to GHCR
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
