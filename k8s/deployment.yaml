@@ -14,7 +14,14 @@ spec:
     spec:
       containers:
       - name: security-app
-        image: my-docker-repo/security-app:latest
+        image: ghcr.io/ananyarana2312/container-supply-chain-security@sha256:085e113df0b7f061e65fa258acead87412f0e8d259c25f459d03497c575eef8c
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "250m"
         ports:
         - containerPort: 5000
 ---
