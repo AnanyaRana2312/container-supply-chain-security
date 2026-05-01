@@ -18,7 +18,8 @@ Start-Sleep -Seconds 5
 
 Write-Host "[*] Cleaning up cluster state before demo..." -ForegroundColor DarkGray
 kubectl delete deployment security-app --ignore-not-found=true 2>$null
-kubectl delete pod unsigned-test --ignore-not-found=true 2>$null
+kubectl delete pods -l app=security-app --force --grace-period=0 2>$null
+kubectl delete pod unsigned-test --ignore-not-found=true --force --grace-period=0 2>$null
 Start-Sleep -Seconds 3
 Clear-Host
 
@@ -43,7 +44,8 @@ Write-Host ""
 Write-Host "> kubectl apply -f k8s/deployment.yaml" -ForegroundColor Green
 kubectl apply -f k8s/deployment.yaml
 Write-Host ""
-Start-Sleep -Seconds 2
+Write-Host "Waiting for the deployment to spin up..." -ForegroundColor DarkGray
+Start-Sleep -Seconds 5
 
 Write-Host "Verifying the application is running successfully..." -ForegroundColor Yellow
 Write-Host "> kubectl get pods -l app=security-app" -ForegroundColor Green

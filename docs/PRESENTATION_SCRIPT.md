@@ -1,36 +1,34 @@
 # Final Presentation Script
 
-## Slide 1: Introduction
+## Slide 1: Supply Chain Security with SLSA & Sigstore
 **Speaker Notes:**
 "Hello everyone, my name is Ananya Rana. Today I'll be presenting my project on Container Supply Chain Security using SLSA and Sigstore. The goal of this project was to tackle a major issue in modern software: how do we mathematically prove that the code running in our cluster is the exact code we built, and hasn't been tampered with?"
 
-## Slide 2: The Architecture
+## Slide 2: The Supply Chain Problem
 **Speaker Notes:**
-"Here is the architecture of the solution. It relies on GitHub Actions for CI/CD, Cosign for image signing, and a Kubernetes admission controller.
-The key innovation here is **Keyless Signing**. Instead of managing private GPG keys which can be stolen, we use GitHub's OIDC identity. Cosign issues a temporary certificate, signs the image, logs it in a public transparency log called Rekor, and then destroys the key."
+"Modern software supply chains are incredibly vulnerable to unauthorized modifications. If an attacker gains access to a registry, they can swap a legitimate image with a malicious one. To solve this, my project implements a Zero-Trust architecture using Cosign for Keyless signing and the Sigstore Policy Controller for strict Kubernetes admission control."
 
-## Slide 3: Shift-Left Security (Trivy)
+## Slide 3: Application Setup & Hardening
+*(Action: Point to the Dockerfile code snippet on the slide)*
 **Speaker Notes:**
-"Before we even sign the image, we scan it. I implemented Trivy in the pipeline to scan the Alpine base image and Python dependencies. The pipeline is configured to enforce a strict break-the-build policy. If any HIGH or CRITICAL vulnerabilities are detected, the pipeline fails, ensuring vulnerable code never reaches the registry."
+"Here you can see the Dockerfile for my Python Flask application. A major part of supply chain security is minimizing the attack surface. As shown in the code snippet, I migrated the base image to `python:3.9-alpine` and implemented an aggressive `apk upgrade` and dependency pinning strategy to eliminate OS-level vulnerabilities before the image is even built."
 
-## Slide 4: Live Demo - The Setup
+## Slide 4: Automated CI/CD with GitHub Actions
+*(Action: Point to the build.yml screenshot on the slide)*
 **Speaker Notes:**
-"For the demo, I have a local Minikube cluster running. I've installed the Sigstore Policy Controller via Helm, and applied a `ClusterImagePolicy`. This policy explicitly tells Kubernetes: 'Only allow containers to run if they were signed by AnanyaRana2312's GitHub Actions pipeline'."
+"This is the 'Shift-Left' portion of the project. In the GitHub Actions pipeline shown here, every build is automatically scanned by Trivy. I implemented a strict break-the-build policy: if any HIGH or CRITICAL vulnerabilities are detected, the pipeline fails with exit-code 1, preventing vulnerable code from ever reaching our container registry."
 
-## Slide 5: Live Demo - Deploying Signed Image
-*(Action: Switch to Terminal)*
+## Slide 5: Cosign & Keyless OIDC Signing
+*(Action: Point to the Rekor or Architecture screenshot on the slide)*
 **Speaker Notes:**
-"First, I'll deploy my Flask application. This image was built and signed by my pipeline."
-*(Run: `kubectl apply -f k8s/deployment.yaml` then `kubectl get pods`)*
-"As you can see, the pod is running successfully. The admission controller verified the signature in milliseconds and allowed it through."
+"Once the image passes the scan, it is pushed to GitHub Container Registry. The key innovation here is Keyless Signing. Instead of managing private keys which can be stolen, Cosign uses the GitHub Actions OIDC token to authenticate. It receives an ephemeral certificate, signs the image, logs that signature in the public Rekor transparency log shown here, and discards the key."
 
-## Slide 6: Live Demo - Blocking Unsigned Image
-*(Action: Stay in Terminal)*
+## Slide 6: Sigstore Policy Controller
+*(Action: Point to the ClusterImagePolicy YAML snippet on the slide)*
 **Speaker Notes:**
-"Now, let's see what happens if an attacker tries to sneak an unauthorized image into the cluster, or if a developer tries to deploy an unsigned image like a standard nginx container."
-*(Run: `kubectl run unsigned-test --image=nginx:latest`)*
-"Notice the error. The API server completely rejects the request. The webhook explicitly states that no matching signatures were found. The cluster is completely locked down to our trusted supply chain."
+"To enforce this on the infrastructure side, I deployed the Sigstore Policy Controller into my local Minikube cluster. As you can see in the `ClusterImagePolicy` YAML, the cluster is strictly configured to only allow containers that possess a valid keyless signature issued specifically from my GitHub identity."
 
-## Slide 7: Conclusion
+## Slide 7: Zero-Trust Enforcement Results
+*(Action: Point to the terminal screenshots showing the allow and block events)*
 **Speaker Notes:**
-"In conclusion, by combining automated vulnerability scanning with cryptographic keyless signing and Kubernetes admission control, we've achieved a Zero-Trust deployment environment. This ensures high SLSA compliance and protects against supply chain attacks. Thank you!"
+"Finally, here are the validation results from the live cluster. In Scenario 1, deploying my signed GHCR image succeeds instantly because the admission webhook mathematically verifies the signature. In Scenario 2, when attempting to deploy an unsigned standard Nginx container, the API server completely rejects the request with a 'no matching policies' error. The cluster is completely locked down to our trusted supply chain. Thank you!"
