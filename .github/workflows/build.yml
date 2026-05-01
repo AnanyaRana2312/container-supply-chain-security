@@ -36,26 +36,32 @@ jobs:
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v2
       with:
-        registry: ghcr.io
+        registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build Docker image
       run: |
-        docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} .
-        docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.IMAGE_NAME }}:latest
+        docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} -t ${{ env.IMAGE_NAME }}:latest .
 
-    - name: Run Trivy vulnerability scanner
+    - name: Run Trivy vulnerability scanner on local image
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
-        format: 'table'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
         exit-code: '0'
         ignore-unfixed: true
         vuln-type: 'os,library'
         severity: 'CRITICAL,HIGH'
 
-    - name: Push Docker image
+    - name: Upload Trivy results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Push Docker image to GHCR
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
@@ -64,6 +70,8 @@ jobs:
     - name: Install Cosign
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: sigstore/cosign-installer@v3
+      with:
+        cosign-release: 'v2.2.0'
 
     - name: Sign image with Cosign
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
