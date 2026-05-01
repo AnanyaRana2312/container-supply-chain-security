@@ -12,6 +12,10 @@ if ($minikubeStatus -notmatch "Running") {
     minikube start
 }
 
+Write-Host "[*] Waiting for Sigstore Policy Controller to be fully ready..." -ForegroundColor DarkGray
+kubectl wait --for=condition=ready pod -l control-plane=policy-controller-webhook -n cosign-system --timeout=120s 2>$null | Out-Null
+Start-Sleep -Seconds 5
+
 Write-Host "[*] Cleaning up cluster state before demo..." -ForegroundColor DarkGray
 kubectl delete deployment security-app --ignore-not-found=true 2>$null
 kubectl delete pod unsigned-test --ignore-not-found=true 2>$null
