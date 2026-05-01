@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/ananyarana2312/container-supply-chain-security
+  IMAGE_NAME: container-supply-chain-security
 
 jobs:
   build-sign-verify:
@@ -34,13 +34,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Build Docker image
       run: |
         docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} -t ${{ env.IMAGE_NAME }}:latest .
@@ -48,7 +41,7 @@ jobs:
     - name: Run Trivy vulnerability scanner on local image
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+        image-ref: docker://${{ env.IMAGE_NAME }}:${{ github.sha }}
         format: 'sarif'
         output: 'trivy-results.sarif'
         exit-code: '0'
@@ -63,11 +56,25 @@ jobs:
         sarif_file: 'trivy-results.sarif'
         category: 'trivy'
 
+    - name: Login to GitHub Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Tag image for GHCR
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.IMAGE_NAME }}:latest
+
     - name: Push Docker image to GHCR
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
-        docker push ${{ env.IMAGE_NAME }}:latest
+        docker push ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker push ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.IMAGE_NAME }}:latest
 
     - name: Install Cosign
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -78,7 +85,7 @@ jobs:
     - name: Sign image with Cosign
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        cosign sign --yes ${{ env.IMAGE_NAME }}:${{ github.sha }}
+        cosign sign --yes ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
       env:
         COSIGN_EXPERIMENTAL: 1
 
@@ -88,4 +95,4 @@ jobs:
         cosign verify \
           --certificate-identity-regexp="https://github.com/AnanyaRana2312/*" \
           --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-          ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
