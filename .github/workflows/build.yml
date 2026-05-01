@@ -56,20 +56,24 @@ jobs:
         severity: 'CRITICAL,HIGH'
 
     - name: Push Docker image
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
         docker push ${{ env.IMAGE_NAME }}:latest
 
     - name: Install Cosign
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: sigstore/cosign-installer@v3
 
     - name: Sign image with Cosign
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         cosign sign --yes ${{ env.IMAGE_NAME }}:${{ github.sha }}
       env:
         COSIGN_EXPERIMENTAL: 1
 
     - name: Verify image signature
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         cosign verify \
           --certificate-identity-regexp="https://github.com/AnanyaRana2312/*" \
