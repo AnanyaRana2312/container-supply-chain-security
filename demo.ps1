@@ -5,6 +5,13 @@ Write-Host " CONTAINER SUPPLY CHAIN SECURITY DEMO - SLSA & SIGSTORE   " -Foregro
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
+Write-Host "[*] Checking if Minikube is running..." -ForegroundColor DarkGray
+$minikubeStatus = minikube status -f "{{.Host}}" 2>&1
+if ($minikubeStatus -notmatch "Running") {
+    Write-Host "[*] Minikube is stopped. Starting Minikube now..." -ForegroundColor Yellow
+    minikube start
+}
+
 Write-Host "[*] Cleaning up cluster state before demo..." -ForegroundColor DarkGray
 kubectl delete deployment security-app --ignore-not-found=true 2>$null
 kubectl delete pod unsigned-test --ignore-not-found=true 2>$null
