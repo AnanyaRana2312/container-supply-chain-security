@@ -7,8 +7,11 @@ WORKDIR /app
 # Copy the current directory contents into the container at /app
 COPY requirements.txt .
 
-# Upgrade pip to resolve any pip-related vulnerabilities and install requirements
-RUN pip install --no-cache-dir --upgrade pip && \
+# Upgrade system packages to resolve OS vulnerabilities
+RUN apk update && apk upgrade --no-cache
+
+# Upgrade pip, setuptools, and wheel to resolve python library vulnerabilities
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
